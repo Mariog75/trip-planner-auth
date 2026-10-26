@@ -8,10 +8,9 @@ Static pages served at https://trip.mariogrebelski.com by GitHub Pages.
   traveller in and approves or denies.
 - `claude/` — the setup guide to share with travellers: one URL to copy
   and the steps to add Trip Planner as a Claude connector.
-- `index.html` — landing page for the Supabase Auth Site URL, where invite,
-  password-reset and confirmation emails point. Trip Planner is
-  invite-only, so invite and reset links land here and let the person
-  choose a password; anyone else sees a short note.
+- `index.html` — a short note at the Supabase Auth Site URL, which exists
+  only to prefix the consent path. Accounts, invites and passwords are all
+  handled in the iOS app.
 - `robots.txt` and a `noindex` tag on every page keep these out of search
   results. They're meant to be shared by link, not found.
 

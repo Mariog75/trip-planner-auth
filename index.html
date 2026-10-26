@@ -1,135 +1,31 @@
 <!doctype html>
 <!--
-  Landing page for the Supabase Auth "Site URL" — where invite, password-reset
-  and confirmation emails send people.
-
-  Trip Planner is invite-only (public sign-ups are off), so an invited person
-  arrives here with a one-time session in the URL fragment
-  (#access_token=…&type=invite) and no password yet. This page lets them choose
-  one, then sends them to the app. Password-reset links (type=recovery) use
-  the same form. Anyone else just sees a short note.
+  Landing page for the Supabase Auth "Site URL", which exists here only to
+  prefix the OAuth consent path (/oauth/consent). Accounts, invites and
+  passwords are all handled in the iOS app (invite and reset emails carry a
+  code you type into the app), so nothing should normally send people here.
 -->
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
-  <meta name="referrer" content="no-referrer">
   <title>Trip Planner</title>
   <style>
-    :root {
-      --bone: #f6f4f0; --parchment: #eceae4; --ink: #1a1a18; --ink-light: #6b6963;
-      --ink-faint: #a8a49c; --danger: #b83232; --card: #fffdf9;
-    }
-    @media (prefers-color-scheme: dark) {
-      :root { --bone: #161614; --parchment: #2a2925; --ink: #f2efe8; --ink-light: #b5b1a8;
-              --ink-faint: #7d7a73; --danger: #e26d6d; --card: #201f1c; }
-    }
-    * { box-sizing: border-box; }
+    :root { --bone: #f6f4f0; --ink: #1a1a18; --ink-light: #6b6963; }
+    @media (prefers-color-scheme: dark) { :root { --bone: #161614; --ink: #f2efe8; --ink-light: #b5b1a8; } }
     body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 24px 16px;
            background: var(--bone); color: var(--ink);
-           font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; }
-    main { width: 100%; max-width: 400px; text-align: center; }
-    h1 { font-family: "New York", Georgia, serif; font-weight: 500; font-size: 30px; margin: 0 0 10px; }
-    p { color: var(--ink-light); margin: 0 auto 12px; max-width: 340px; }
-    form { text-align: left; background: var(--card); border: 1px solid var(--parchment); border-radius: 20px;
-           padding: 22px 20px; margin-top: 18px; }
-    label { display: block; font-size: 13px; color: var(--ink-light); margin: 10px 0 4px; }
-    input { width: 100%; padding: 11px 12px; border-radius: 10px; border: 1px solid var(--parchment);
-            background: var(--bone); color: var(--ink); font: inherit; }
-    button { width: 100%; margin-top: 18px; padding: 12px; border-radius: 12px; border: 0; font: inherit;
-             font-weight: 600; background: var(--ink); color: var(--bone); cursor: pointer; }
-    button:disabled { opacity: .5; cursor: default; }
-    .who { color: var(--ink); font-weight: 600; }
-    .error { color: var(--danger); font-size: 13px; min-height: 1em; margin-top: 12px; }
-    .hint { font-size: 12px; color: var(--ink-faint); margin-top: 6px; }
-    [hidden] { display: none !important; }
+           font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; text-align: center; }
+    h1 { font-family: "New York", Georgia, serif; font-weight: 500; }
+    p { color: var(--ink-light); max-width: 340px; }
   </style>
 </head>
 <body>
-<main>
-  <h1>Trip Planner</h1>
-
-  <section id="default">
-    <p>You're all set. Head back to the Trip Planner app on your iPhone to continue.</p>
-  </section>
-
-  <section id="loading" hidden><p>Loading…</p></section>
-
-  <section id="expired" hidden>
-    <p>This link has expired or was already used. Ask Mario to send you a new one.</p>
-  </section>
-
-  <form id="set-password" hidden>
-    <p id="form-intro" style="text-align:center"></p>
-    <label for="password">New password</label>
-    <input id="password" type="password" autocomplete="new-password" minlength="8" required>
-    <label for="confirm">Type it again</label>
-    <input id="confirm" type="password" autocomplete="new-password" minlength="8" required>
-    <p class="hint">At least 8 characters.</p>
-    <button type="submit" id="save">Save password</button>
-    <p class="error" id="error" role="alert"></p>
-  </form>
-
-  <section id="done" hidden>
-    <p>Your password is saved. Open <span class="who">Trip Planner</span> on your iPhone and sign in as
-      <span class="who" id="done-email"></span>.</p>
-  </section>
-</main>
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"
-        integrity="sha384-BWcjm9OdFth9TbhCxZPdm+gAOUMAzQy9nmTs12ioXdCcbVnJaPMn+fMUoQCLt60R"
-        crossorigin="anonymous"></script>
-<script>
-  const SUPABASE_URL = "https://suzoxyptffuzjgndzukm.supabase.co";
-  const PUBLISHABLE_KEY = "sb_publishable_oSEbV3cwDc2f7JgNqspyYg_D3fzmoNV";
-  const $ = (id) => document.getElementById(id);
-  const show = (id) => {
-    for (const s of ["default", "loading", "expired", "set-password", "done"]) $(s).hidden = s !== id;
-  };
-
-  // Read the link's intent before supabase-js consumes the fragment.
-  const hash = new URLSearchParams(location.hash.slice(1));
-  const linkType = hash.get("type");            // "invite" | "recovery" | "signup" | …
-  const linkError = hash.get("error_code") || hash.get("error");
-
-  // No session is kept: this page only ever sets a password, then signs out.
-  const sb = supabase.createClient(SUPABASE_URL, PUBLISHABLE_KEY, {
-    auth: { persistSession: false, detectSessionInUrl: true },
-  });
-
-  let email = "";
-
-  (async () => {
-    if (linkError) return show("expired");
-    if (linkType !== "invite" && linkType !== "recovery") return; // keep the default note
-    show("loading");
-    const { data: { session } } = await sb.auth.getSession();
-    if (!session) return show("expired");
-    email = session.user.email ?? "";
-    history.replaceState(null, "", location.pathname); // drop the token from the address bar
-    $("form-intro").textContent = linkType === "invite"
-      ? `Welcome! Choose a password for ${email} to finish setting up your account.`
-      : `Choose a new password for ${email}.`;
-    show("set-password");
-  })();
-
-  $("set-password").addEventListener("submit", async (e) => {
-    e.preventDefault();
-    $("error").textContent = "";
-    const password = $("password").value;
-    if (password.length < 8) return ($("error").textContent = "Use at least 8 characters.");
-    if (password !== $("confirm").value) return ($("error").textContent = "The two passwords don't match.");
-    $("save").disabled = true;
-    const { error } = await sb.auth.updateUser({ password });
-    if (error) {
-      $("save").disabled = false;
-      return ($("error").textContent = error.message);
-    }
-    await sb.auth.signOut({ scope: "local" }); // this page only; app sessions stay
-    $("done-email").textContent = email;
-    show("done");
-  });
-</script>
+  <div>
+    <h1>Trip Planner</h1>
+    <p>Trip Planner lives in the app on your iPhone. Looking to use it with Claude?
+      See <a href="/claude/">the setup guide</a>.</p>
+  </div>
 </body>
 </html>
