@@ -41,7 +41,7 @@
     ol.steps > li::before { content: counter(step); position: absolute; left: 0; top: -1px; width: 30px; height: 30px;
                             border-radius: 50%; background: var(--accent-light); color: var(--accent);
                             font-weight: 700; display: grid; place-items: center; font-size: 15px; }
-    .ui { display: inline-block; background: var(--parchment); color: var(--ink); border-radius: 6px; padding: 0 6px;
+    .ui { display: inline-block; white-space: nowrap; background: var(--parchment); color: var(--ink); border-radius: 6px; padding: 0 6px;
           font-size: 14px; font-weight: 500; }
     a { color: var(--accent); }
     ul.examples { padding-left: 18px; color: var(--ink-light); }
@@ -80,7 +80,7 @@
       Do this on a computer or in your phone's web browser — once it's connected, it works in the Claude app too.
     </li>
     <li>
-      Click <span class="ui">+ Add</span>, then <span class="ui">Add custom connector</span>.
+      Click <span class="ui">+ Add</span>, then <span class="ui">Add custom connector</span>
     </li>
     <li>
       Type <strong>Trip Planner</strong> as the name, paste the address into the URL box, and click
