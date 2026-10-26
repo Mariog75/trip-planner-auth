@@ -1,0 +1,188 @@
+<!doctype html>
+<!--
+  OAuth consent screen for the trip-agent MCP connector.
+
+  Supabase Auth is the authorization server. When claude.ai (or another
+  registered OAuth client) asks to connect, Supabase sends the browser here
+  with ?authorization_id=…, and this page signs the traveller in, shows who is
+  asking, and approves or denies. Supabase then redirects back to the client.
+
+  It has to be a real web page on a real host: Supabase serves Edge Function
+  and Storage HTML as text/plain on its own domain. The publishable key below
+  is public by design — RLS and the Auth server enforce everything.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>Trip Planner · Connect</title>
+  <style>
+    :root {
+      --bone: #f6f4f0; --parchment: #eceae4; --ink: #1a1a18; --ink-light: #6b6963;
+      --ink-faint: #a8a49c; --danger: #b83232; --card: #fffdf9;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root { --bone: #161614; --parchment: #2a2925; --ink: #f2efe8; --ink-light: #b5b1a8;
+              --ink-faint: #7d7a73; --danger: #e26d6d; --card: #201f1c; }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 24px 16px;
+           background: var(--bone); color: var(--ink);
+           font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; }
+    main { width: 100%; max-width: 400px; background: var(--card); border: 1px solid var(--parchment);
+           border-radius: 20px; padding: 28px 24px; box-shadow: 0 10px 30px rgba(0,0,0,.08); }
+    .eyebrow { font-size: 11px; letter-spacing: .15em; text-transform: uppercase; color: var(--ink-faint); margin: 0; }
+    h1 { font-family: "New York", Georgia, serif; font-weight: 500; font-size: 26px; margin: 4px 0 16px; }
+    p { margin: 0 0 12px; color: var(--ink-light); }
+    .who { color: var(--ink); font-weight: 600; }
+    ul { margin: 0 0 16px; padding-left: 18px; color: var(--ink-light); }
+    label { display: block; font-size: 13px; color: var(--ink-light); margin: 10px 0 4px; }
+    input { width: 100%; padding: 11px 12px; border-radius: 10px; border: 1px solid var(--parchment);
+            background: var(--bone); color: var(--ink); font: inherit; }
+    .row { display: flex; gap: 10px; margin-top: 18px; }
+    button { flex: 1; padding: 12px; border-radius: 12px; border: 1px solid var(--parchment); font: inherit;
+             font-weight: 600; cursor: pointer; background: var(--bone); color: var(--ink); }
+    button.primary { background: var(--ink); color: var(--bone); border-color: var(--ink); }
+    button:disabled { opacity: .5; cursor: default; }
+    .error { color: var(--danger); font-size: 13px; min-height: 1em; margin-top: 12px; }
+    .small { font-size: 12px; color: var(--ink-faint); margin-top: 16px; }
+    .link { background: none; border: 0; padding: 0; color: var(--ink-light); text-decoration: underline;
+            font-weight: 400; font-size: 12px; flex: none; }
+    [hidden] { display: none !important; }
+  </style>
+</head>
+<body>
+<main>
+  <p class="eyebrow">Trip Planner</p>
+  <h1 id="title">Connect an AI agent</h1>
+
+  <section id="loading"><p>Loading…</p></section>
+
+  <section id="missing" hidden>
+    <p>This page opens when you add Trip Planner as a connector in Claude. There's nothing to approve right now.</p>
+  </section>
+
+  <form id="signin" hidden>
+    <p>Sign in with your Trip Planner account to continue.</p>
+    <label for="email">Email</label>
+    <input id="email" type="email" autocomplete="username" required>
+    <label for="password">Password</label>
+    <input id="password" type="password" autocomplete="current-password" required>
+    <div class="row"><button class="primary" type="submit" id="signin-btn">Sign in</button></div>
+  </form>
+
+  <section id="consent" hidden>
+    <p><span class="who" id="client-name"></span> wants to use your Trip Planner account.</p>
+    <p>It will be able to:</p>
+    <ul>
+      <li>see the itineraries you own or that are shared with you, with their bookings, places and travel documents</li>
+      <li>add, change and delete bookings — each change is flagged for your review in the app</li>
+    </ul>
+    <p class="small">Signed in as <span id="user-email"></span>.
+      Sends you back to <span id="redirect-host"></span>.
+      <button type="button" class="link" id="switch">Not you?</button></p>
+    <div class="row">
+      <button type="button" id="deny">Deny</button>
+      <button type="button" class="primary" id="approve">Allow</button>
+    </div>
+  </section>
+
+  <section id="not-allowed" hidden>
+    <p>Agent access isn't enabled for <span class="who" id="na-email"></span>. Ask the app's admin to turn it on, then try connecting again.</p>
+    <div class="row"><button type="button" id="na-deny">Cancel connection</button></div>
+  </section>
+
+  <p class="error" id="error" role="alert"></p>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.3/dist/umd/supabase.js"
+        integrity="sha384-BWcjm9OdFth9TbhCxZPdm+gAOUMAzQy9nmTs12ioXdCcbVnJaPMn+fMUoQCLt60R"
+        crossorigin="anonymous"></script>
+<script>
+  const SUPABASE_URL = "https://suzoxyptffuzjgndzukm.supabase.co";
+  const PUBLISHABLE_KEY = "sb_publishable_oSEbV3cwDc2f7JgNqspyYg_D3fzmoNV";
+
+  const sb = supabase.createClient(SUPABASE_URL, PUBLISHABLE_KEY);
+  const authorizationId = new URLSearchParams(location.search).get("authorization_id");
+  const $ = (id) => document.getElementById(id);
+
+  function show(id) {
+    for (const s of ["loading", "missing", "signin", "consent", "not-allowed"]) $(s).hidden = s !== id;
+  }
+  function fail(message) {
+    $("error").textContent = message;
+  }
+  function busy(on) {
+    for (const b of document.querySelectorAll("button")) b.disabled = on;
+  }
+
+  async function loadDetails() {
+    show("loading");
+    const { data, error } = await sb.auth.oauth.getAuthorizationDetails(authorizationId);
+    if (error) {
+      show("missing");
+      return fail(error.message || "This connection request has expired. Start again from Claude.");
+    }
+    // Already consented before: Supabase hands back only where to go next.
+    if (!data.authorization_id && data.redirect_url) {
+      location.assign(data.redirect_url);
+      return;
+    }
+    // Refuse at consent, not just later: an account off the allowlist would
+    // otherwise "connect" and then fail on every call.
+    const { data: allowed, error: accessError } = await sb.rpc("has_agent_access");
+    if (accessError || allowed !== true) {
+      $("na-email").textContent = data.user?.email ?? "this account";
+      return show("not-allowed");
+    }
+    $("client-name").textContent = data.client?.name || "An app";
+    $("user-email").textContent = data.user?.email ?? "";
+    try {
+      $("redirect-host").textContent = new URL(data.redirect_uri).host;
+    } catch {
+      $("redirect-host").textContent = data.redirect_uri ?? "";
+    }
+    show("consent");
+  }
+
+  async function decide(approve) {
+    busy(true);
+    fail("");
+    // Both redirect the browser on success.
+    const { error } = approve
+      ? await sb.auth.oauth.approveAuthorization(authorizationId)
+      : await sb.auth.oauth.denyAuthorization(authorizationId);
+    if (error) {
+      busy(false);
+      fail(error.message);
+    }
+  }
+
+  $("signin").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    busy(true);
+    fail("");
+    const { error } = await sb.auth.signInWithPassword({ email: $("email").value.trim(), password: $("password").value });
+    busy(false);
+    if (error) return fail(error.message);
+    $("password").value = "";
+    loadDetails();
+  });
+  $("approve").addEventListener("click", () => decide(true));
+  $("deny").addEventListener("click", () => decide(false));
+  $("na-deny").addEventListener("click", () => decide(false));
+  $("switch").addEventListener("click", async () => {
+    await sb.auth.signOut();
+    show("signin");
+  });
+
+  (async () => {
+    if (!authorizationId) return show("missing");
+    const { data: { session } } = await sb.auth.getSession();
+    if (session) loadDetails();
+    else show("signin");
+  })();
+</script>
+</body>
+</html>
