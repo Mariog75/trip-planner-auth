@@ -88,6 +88,11 @@
     </div>
   </section>
 
+  <section id="not-claude" hidden>
+    <p>This connection request isn't from Claude, so it can't be approved here. Trip Planner only connects to Claude (claude.ai and the Claude apps).</p>
+    <div class="row"><button type="button" id="nc-deny">Cancel connection</button></div>
+  </section>
+
   <section id="not-allowed" hidden>
     <p>Agent access isn't enabled for <span class="who" id="na-email"></span>. Ask the app's admin to turn it on, then try connecting again.</p>
     <div class="row"><button type="button" id="na-deny">Cancel connection</button></div>
@@ -105,10 +110,17 @@
 
   const sb = supabase.createClient(SUPABASE_URL, PUBLISHABLE_KEY);
   const authorizationId = new URLSearchParams(location.search).get("authorization_id");
+  // Dynamic registration is on so Claude can register itself, which means
+  // anyone can register a client. Only requests that return to Claude are
+  // approvable here; the trip-agent function enforces the same rule.
+  const CLAUDE_CALLBACKS = [
+    "https://claude.ai/api/mcp/auth_callback",
+    "https://claude.com/api/mcp/auth_callback",
+  ];
   const $ = (id) => document.getElementById(id);
 
   function show(id) {
-    for (const s of ["loading", "missing", "signin", "consent", "not-allowed"]) $(s).hidden = s !== id;
+    for (const s of ["loading", "missing", "signin", "consent", "not-claude", "not-allowed"]) $(s).hidden = s !== id;
   }
   function fail(message) {
     $("error").textContent = message;
@@ -129,6 +141,7 @@
       location.assign(data.redirect_url);
       return;
     }
+    if (!CLAUDE_CALLBACKS.includes(data.redirect_uri)) return show("not-claude");
     // Refuse at consent, not just later: an account off the allowlist would
     // otherwise "connect" and then fail on every call.
     const { data: allowed, error: accessError } = await sb.rpc("has_agent_access");
@@ -172,6 +185,7 @@
   $("approve").addEventListener("click", () => decide(true));
   $("deny").addEventListener("click", () => decide(false));
   $("na-deny").addEventListener("click", () => decide(false));
+  $("nc-deny").addEventListener("click", () => decide(false));
   $("switch").addEventListener("click", async () => {
     await sb.auth.signOut();
     show("signin");

@@ -1,0 +1,137 @@
+<!doctype html>
+<!--
+  Setup guide for connecting Claude to Trip Planner, written for people who
+  aren't technical. Share this page's link; everything a traveller needs is
+  here. Claude registers itself with the Trip Planner sign-in server, so
+  there's no client ID or key to copy — just the one URL below.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trip Planner in Claude</title>
+  <meta name="description" content="Connect Claude to your Trip Planner trips in a couple of minutes.">
+  <style>
+    :root {
+      --bone: #f6f4f0; --parchment: #eceae4; --ink: #1a1a18; --ink-light: #6b6963;
+      --ink-faint: #a8a49c; --card: #fffdf9; --accent: #1a6b4a; --accent-light: #e6f5ee;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root { --bone: #161614; --parchment: #2a2925; --ink: #f2efe8; --ink-light: #b5b1a8;
+              --ink-faint: #7d7a73; --card: #201f1c; --accent: #6fd0a2; --accent-light: #1d2e26; }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bone); color: var(--ink);
+           font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; }
+    main { max-width: 620px; margin: 0 auto; padding: 40px 16px 64px; }
+    .eyebrow { font-size: 12px; letter-spacing: .15em; text-transform: uppercase; color: var(--ink-faint); margin: 0; }
+    h1 { font-family: "New York", Georgia, serif; font-weight: 500; font-size: 34px; line-height: 1.15; margin: 6px 0 12px; }
+    h2 { font-family: "New York", Georgia, serif; font-weight: 500; font-size: 22px; margin: 36px 0 12px; }
+    p { margin: 0 0 12px; color: var(--ink-light); }
+    strong { color: var(--ink); font-weight: 600; }
+    .card { background: var(--card); border: 1px solid var(--parchment); border-radius: 18px; padding: 18px; }
+    .before li { margin-bottom: 6px; color: var(--ink-light); }
+    .copy { display: flex; gap: 8px; align-items: stretch; margin-top: 8px; }
+    .copy code { flex: 1; min-width: 0; overflow-wrap: anywhere; font: 13px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace;
+                 background: var(--bone); border: 1px solid var(--parchment); border-radius: 10px; padding: 10px 12px; color: var(--ink); }
+    button { font: inherit; font-weight: 600; border-radius: 10px; border: 0; padding: 0 16px; cursor: pointer;
+             background: var(--ink); color: var(--bone); white-space: nowrap; }
+    ol.steps { list-style: none; counter-reset: step; padding: 0; margin: 0; }
+    ol.steps > li { counter-increment: step; position: relative; padding: 0 0 18px 44px; color: var(--ink-light); }
+    ol.steps > li::before { content: counter(step); position: absolute; left: 0; top: -1px; width: 30px; height: 30px;
+                            border-radius: 50%; background: var(--accent-light); color: var(--accent);
+                            font-weight: 700; display: grid; place-items: center; font-size: 15px; }
+    .ui { display: inline-block; background: var(--parchment); color: var(--ink); border-radius: 6px; padding: 0 6px;
+          font-size: 14px; font-weight: 500; }
+    a { color: var(--accent); }
+    ul.examples { padding-left: 18px; color: var(--ink-light); }
+    ul.examples li { margin-bottom: 6px; }
+    .small { font-size: 14px; color: var(--ink-faint); }
+  </style>
+</head>
+<body>
+<main>
+  <p class="eyebrow">Trip Planner</p>
+  <h1>Use your trips in Claude</h1>
+  <p>Connect Claude to Trip Planner and you can ask about your itinerary in plain words, or have Claude add bookings
+    for you. It takes about two minutes, and you only do it once.</p>
+
+  <h2>Before you start</h2>
+  <div class="card before">
+    <ul style="margin:0; padding-left:18px">
+      <li><strong>A Trip Planner account.</strong> The same email and password you use in the app.</li>
+      <li><strong>Claude access turned on for you.</strong> Ask Mario. Until he does, sign-in will say access isn't enabled.</li>
+      <li><strong>A Claude account</strong> at <a href="https://claude.ai">claude.ai</a>. The free plan works.</li>
+    </ul>
+  </div>
+
+  <h2>Connect it</h2>
+  <ol class="steps">
+    <li>
+      <strong>Copy this address.</strong>
+      <div class="copy">
+        <code id="url">https://suzoxyptffuzjgndzukm.supabase.co/functions/v1/trip-agent/mcp</code>
+        <button type="button" id="copy">Copy</button>
+      </div>
+    </li>
+    <li>
+      <strong>Open Claude's connector settings:</strong>
+      <a href="https://claude.ai/customize/connectors" target="_blank" rel="noopener">claude.ai/customize/connectors</a>.
+      Do this on a computer or in your phone's web browser — once it's connected, it works in the Claude app too.
+    </li>
+    <li>
+      Click <span class="ui">+ Add</span>, then <span class="ui">Add custom connector</span>.
+    </li>
+    <li>
+      Type <strong>Trip Planner</strong> as the name, paste the address into the URL box, and click
+      <span class="ui">Continue</span> or <span class="ui">Add</span>. Leave the other settings as they are.
+      If Claude asks how to identify itself, choose <span class="ui">Register automatically</span>.
+    </li>
+    <li>
+      A Trip Planner page opens. <strong>Sign in with your Trip Planner email and password</strong>, then click
+      <span class="ui">Allow</span>. You'll land back in Claude, connected.
+    </li>
+    <li>
+      In a chat, click <span class="ui">+</span> at the bottom left, open <span class="ui">Connectors</span>,
+      and switch on <strong>Trip Planner</strong>.
+    </li>
+  </ol>
+
+  <h2>Things to try</h2>
+  <ul class="examples">
+    <li>“What's my itinerary for Japan, day by day?”</li>
+    <li>“When do I check out of the hotel in Kyoto?”</li>
+    <li>“Which nights don't have a hotel yet?”</li>
+    <li>“Add a dinner reservation at Sushi Saito in Tokyo on Jan 3 at 7:30pm for 2.”</li>
+    <li>If you've also connected Gmail in Claude: “Find my hotel confirmation emails for Osaka and add them to my Japan trip.”</li>
+  </ul>
+
+  <h2>Good to know</h2>
+  <p><strong>Anything Claude adds or changes is marked “Needs review”</strong> in the app until you open it and save it
+    yourself, so nothing slips in unnoticed.</p>
+  <p><strong>Times are local.</strong> A 3:00 PM check-in in Kyoto stays 3:00 PM, wherever you are when you look.</p>
+  <p><strong>Claude sees the same trips you see</strong> in the app — your own and any shared with you — and nothing else.</p>
+  <p><strong>To disconnect,</strong> remove Trip Planner from
+    <a href="https://claude.ai/customize/connectors" target="_blank" rel="noopener">Claude's connector settings</a>.</p>
+  <p class="small">Stuck? If sign-in says access isn't enabled, ask Mario to turn it on. If something else goes wrong,
+    send him a screenshot of the screen you're on.</p>
+</main>
+<script>
+  document.getElementById("copy").addEventListener("click", async (e) => {
+    const text = document.getElementById("url").textContent.trim();
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      const range = document.createRange();
+      range.selectNodeContents(document.getElementById("url"));
+      const sel = getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      document.execCommand("copy");
+    }
+    e.target.textContent = "Copied";
+    setTimeout(() => (e.target.textContent = "Copy"), 2000);
+  });
+</script>
+</body>
+</html>
